@@ -1,0 +1,26 @@
+default: mysql
+sqlite:
+   driver: sqlite3
+   database: /absolute/path/to/gogogo.sqlite
+   prefix:
+mysql:
+  driver: mysql
+  host: localhost
+  port: 3306
+  database: gogogo
+  username: root
+  password:
+  unix_socket:
+  charset: utf8mb4
+  collation: utf8mb4_unicode_ci
+  prefix:
+pgsql:
+  driver: postgres
+  host: 127.0.0.1
+  port: 5432
+  database: gogogo
+  username: qclaogui
+  password:
+  charset: utf8
+  prefix:
+  sslmode: disable
