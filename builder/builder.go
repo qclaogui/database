@@ -292,54 +292,90 @@ func dealValues(values ...string) string {
 	return value
 }
 
+// dealWhereValues
+// Where("age", ">=", "22", "(")
+// example value = 22, pt= "("
+func dealWhereValues(values ...string) (value, pt string) {
+	if len(values) > 1 {
+		pt = values[1]
+	}
+
+	if len(values) > 0 {
+		value = values[0]
+	}
+
+	return
+}
+
 // WhereTime wh
 func (b *Builder) WhereTime(column, operator string, values ...string) *Builder {
-	return b.where("Time", column, operator, dealValues(values...), "and")
+
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Time", column, operator, value, "and", pt)
 }
 
 // OrWhereTime ou
 func (b *Builder) OrWhereTime(column, operator string, values ...string) *Builder {
-	return b.where("Time", column, operator, dealValues(values...), "or")
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Time", column, operator, value, "or", pt)
 }
 
 // WhereDay day
 func (b *Builder) WhereDay(column, operator string, values ...string) *Builder {
-	return b.where("Day", column, operator, dealValues(values...), "and")
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Day", column, operator, value, "and", pt)
 }
 
 // OrWhereDay or
 func (b *Builder) OrWhereDay(column, operator string, values ...string) *Builder {
-	return b.where("Day", column, operator, dealValues(values...), "or")
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Day", column, operator, value, "or", pt)
 }
 
 // WhereMonth month
 func (b *Builder) WhereMonth(column, operator string, values ...string) *Builder {
-	return b.where("Month", column, operator, dealValues(values...), "and")
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Month", column, operator, value, "and", pt)
 }
 
 // OrWhereMonth or
 func (b *Builder) OrWhereMonth(column, operator string, values ...string) *Builder {
-	return b.where("Month", column, operator, dealValues(values...), "or")
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Month", column, operator, value, "or", pt)
 }
 
 // WhereYear Add a "where year" statement to the query.
 func (b *Builder) WhereYear(column, operator string, values ...string) *Builder {
-	return b.where("Year", column, operator, dealValues(values...), "and")
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Year", column, operator, value, "and", pt)
 }
 
 // OrWhereYear Add a "or where year" statement to the query.
 func (b *Builder) OrWhereYear(column, operator string, values ...string) *Builder {
-	return b.where("Year", column, operator, dealValues(values...), "or")
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Year", column, operator, value, "or", pt)
 }
 
 // WhereDate data
 func (b *Builder) WhereDate(column, operator string, values ...string) *Builder {
-	return b.where("Date", column, operator, dealValues(values...), "and")
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Date", column, operator, value, "and", pt)
 }
 
 // OrWhereDate or
 func (b *Builder) OrWhereDate(column, operator string, values ...string) *Builder {
-	return b.where("Date", column, operator, dealValues(values...), "or")
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Date", column, operator, value, "or", pt)
 }
 
 func (b *Builder) addBindings(where map[string]string) {
@@ -497,7 +533,7 @@ func (b *Builder) whereRaw(sql, value, logical string) *Builder {
 }
 
 // Where Add a basic where clause to the query.
-func (b *Builder) where(whereType, column, operator, value, logical string) *Builder {
+func (b *Builder) where(whereType, column, operator, value, logical, pt string) *Builder {
 
 	if invalidOperatorAndValue(operator, value) {
 		// TODO
@@ -517,6 +553,7 @@ func (b *Builder) where(whereType, column, operator, value, logical string) *Bui
 		"operator": operator,
 		"value":    value,
 		"logical":  logical,
+		"pt":       pt,
 	}
 
 	b.Components["wheres"] = append(b.Components["wheres"], where)
@@ -530,13 +567,17 @@ func (b *Builder) where(whereType, column, operator, value, logical string) *Bui
 // Where Add a basic where clause to the query.
 func (b *Builder) Where(column, operator string, values ...string) *Builder {
 
-	return b.where("Basic", column, operator, dealValues(values...), "and")
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Basic", column, operator, value, "and", pt)
 }
 
 // OrWhere Add an "or where" clause to the query.
 func (b *Builder) OrWhere(column, operator string, values ...string) *Builder {
 
-	return b.where("Basic", column, operator, dealValues(values...), "or")
+	value, pt := dealWhereValues(values...)
+
+	return b.where("Basic", column, operator, value, "or", pt)
 }
 
 // Latest Add an "order by" clause for a timestamp to the query.
@@ -561,7 +602,7 @@ func (b *Builder) Oldest(columns ...string) *Builder {
 
 // Find Execute a query for a single record by ID.
 func (b *Builder) Find(id int, columns ...string) map[string]interface{} {
-	return b.where("Basic", "id", "=", itoa(id), "and").First(columns...)
+	return b.where("Basic", "id", "=", itoa(id), "and", "").First(columns...)
 }
 
 // Value Get a single column's value from the first result of a query.

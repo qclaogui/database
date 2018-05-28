@@ -267,6 +267,13 @@ func (g *Grammars) compileComponentWheres(sql *strings.Builder) {
 			sql.WriteString(w["logical"])
 			sql.WriteString(" ")
 		}
+
+		if pt, ok := w["pt"]; ok {
+			if pt == "(" {
+				sql.WriteString("(")
+			}
+		}
+
 		switch w["type"] {
 		case "Basic":
 			sql.WriteString(g.wrap(w["column"]))
@@ -315,6 +322,12 @@ func (g *Grammars) compileComponentWheres(sql *strings.Builder) {
 			sql.WriteString(w["sql"])
 		default:
 			panic("where type not Found")
+		}
+
+		if pt, ok := w["pt"]; ok {
+			if pt == ")" {
+				sql.WriteString(")")
+			}
 		}
 	}
 }

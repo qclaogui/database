@@ -135,8 +135,7 @@ users :=DB.Table("users").Distinct().Get()
 ## Where Clauses
 
 #### Simple Where Clauses
-The most basic call to `where` requires three arguments. The first argument is the name of the column. The second argument is an operator, which can be any of the database's supported operators. Finally, the third argument is the value to evaluate against the column.
-You may use the `where` method
+In general, the `Where` method requires three arguments. The first argument is the name of the column. The second argument is an operator, which can be any of the database's supported operators. Finally, the third argument is the value to evaluate against the column.
 
 ```go
 users :=DB.Table("users").Where("votes", "=", "100").Get()
@@ -152,6 +151,13 @@ users :=DB.Table("users").Where("votes","<>", "100").Get()
 
 users :=DB.Table("users").Where("votes","like", "T%").Get()
 
+```
+#### Or Statements
+
+You may chain where constraints together as well as add `or` clauses to the query. The `orWhere` method accepts the same arguments as the `where` method:
+
+```go
+users :=DB.Table("users").Where("votes",">", "100").OrWhere('name', 'John').Get()
 ```
 
 **whereBetween**
@@ -219,6 +225,20 @@ specific time:
 users :=DB.Table("users").WhereTime("created_at","=", "12:30:15").Get()
 
 ```
+#### Parameter Grouping
+
+Sometimes, you might want to use parentheses to create a more advanced where statement,
+Only in this case ,The `Where` method **requires four arguments**. like:
+
+```go
+users :=DB.Table("users").Where("age", ">=", "22", "(").Where("gender", "Male").Where("house", ">=", "1", ")").
+		OrWhere("age", ">=", "20", "(").Where("gender", "=", "Female", ")").
+		Get()
+```
+
+The example above will produce the following SQL(mysql):
+
+`select * from users where (age >= ? and gender = ? and house >= ?) or (age >= ? and gender = ?)`
 
 <a name="ordering-grouping-limit-and-offset"></a>
 ## Ordering, Grouping, Limit, & Offset
