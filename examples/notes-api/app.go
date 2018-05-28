@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 
+	"errors"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/qclaogui/database/builder"
 )
@@ -16,8 +18,13 @@ import (
 //  PRIMARY KEY (`id`)
 // ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8mb4;
 
-// App application name
-var App *AppService
+var (
+	errInsert     = errors.New("Oops! error occurs when  insert")
+	errDelete     = errors.New("Oops! error occurs when  delete")
+	errUpdate     = errors.New("Oops! error occurs when  update")
+	errNotExist   = errors.New("Oops! notes is not  exist")
+	errEmptyNotes = errors.New("Oops! no  notes")
+)
 
 // AppService service
 type AppService struct {
@@ -44,7 +51,7 @@ func NewAppService() *AppService {
 
 // AppService routes
 func (s *AppService) routes() {
-	// welcome page
+	// welcome msg
 	s.router.GET("/", s.welcome)
 	s.router.GET("/notes", s.GetAll)
 	s.router.POST("/notes", s.Create)
@@ -54,22 +61,22 @@ func (s *AppService) routes() {
 }
 
 type resBody struct {
-	ErrCode int         `json:"err_code" xml:"err_code"`
-	Data    interface{} `json:"data" xml:"data"`
-	ErrMsg  string      `json:"err_msg" xml:"err_msg"`
+	ErrCode int         `json:"err_code"`
+	Data    interface{} `json:"data"`
+	ErrMsg  string      `json:"err_msg"`
 }
 
 func resOK(data interface{}) *resBody {
 	return &resBody{ErrCode: 0, Data: data, ErrMsg: "ok"}
 }
 
-func resNotOK(data interface{}) *resBody {
-	return &resBody{ErrCode: 40001, Data: data, ErrMsg: "Oops! somthing wrong"}
+func resNotOK(errCode int, data interface{}, errMsg string) *resBody {
+	return &resBody{ErrCode: errCode, Data: data, ErrMsg: errMsg}
 }
 
 func toJSON(w http.ResponseWriter, result *resBody) {
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(result)
 }
 
@@ -93,7 +100,7 @@ func (s *AppService) Create(w http.ResponseWriter, r *http.Request, _ httprouter
 	res := s.DB.Table("notes").Insert(notes)
 
 	if res < 1 {
-		toJSON(w, resNotOK(false))
+		toJSON(w, resNotOK(40001, false, errInsert.Error()))
 	} else {
 		toJSON(w, resOK(true))
 	}
@@ -110,7 +117,7 @@ func (s *AppService) Update(w http.ResponseWriter, r *http.Request, ps httproute
 	res := s.DB.Table("notes").Where("id", ps.ByName("id")).Update(note)
 
 	if res < 1 {
-		toJSON(w, resNotOK(false))
+		toJSON(w, resNotOK(40002, false, errUpdate.Error()))
 	} else {
 		toJSON(w, resOK(true))
 	}
@@ -122,7 +129,7 @@ func (s *AppService) GetOne(w http.ResponseWriter, r *http.Request, ps httproute
 	res := s.DB.Table("notes").Where("id", ps.ByName("id")).First()
 
 	if len(res) < 1 {
-		toJSON(w, resNotOK(false))
+		toJSON(w, resNotOK(40004, false, errNotExist.Error()))
 	} else {
 		toJSON(w, resOK(res))
 	}
@@ -134,7 +141,7 @@ func (s *AppService) Destroy(w http.ResponseWriter, r *http.Request, ps httprout
 	res := s.DB.Table("notes").Where("id", ps.ByName("id")).Delete()
 
 	if res < 1 {
-		toJSON(w, resNotOK(false))
+		toJSON(w, resNotOK(40005, false, errDelete.Error()))
 	} else {
 		toJSON(w, resOK(true))
 	}
@@ -146,7 +153,7 @@ func (s *AppService) GetAll(w http.ResponseWriter, r *http.Request, _ httprouter
 	res := s.DB.Table("notes").Limit(1000).Get()
 
 	if len(res) < 1 {
-		toJSON(w, resNotOK("no notes"))
+		toJSON(w, resNotOK(40006, false, errEmptyNotes.Error()))
 	} else {
 		toJSON(w, resOK(res))
 	}
