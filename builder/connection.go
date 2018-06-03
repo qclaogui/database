@@ -19,6 +19,7 @@ type Connection struct {
 	queryLog          []map[string]interface{} // All of the queries run against the connection.
 	loggingQueries    bool                     // Indicates whether queries are being logged.
 	recordsIsModified bool                     // Indicates if changes have been made to the database.
+	Pretending        bool                     //Indicates if the connection is in a "dry run".
 }
 
 func hasReadWrite(c *DBConfig) (hasRead bool) {
@@ -150,9 +151,6 @@ func (m *Connection) run(callback func() ([]map[string]interface{}, int64, error
 
 	start := time.Now()
 
-	// resets the Builder
-	m.Grammar.GetBuilder().Reset()
-
 	// 开始执行callback 返回结果集，受影响的行数，发生错误
 	result, rowCnt, err := callback()
 	if err != nil {
@@ -166,19 +164,21 @@ func (m *Connection) run(callback func() ([]map[string]interface{}, int64, error
 
 	// Once we have run the query we will calculate the time that it took to run and
 	// then log the query
-	// m.logQuery("LOG: ", m.Grammar.GetBuilder().PSql, m.Grammar.GetBuilder().PArgs, time.Since(start))
+	m.logQuery(m.Grammar.GetBuilder().PSql, m.Grammar.GetBuilder().PArgs, time.Since(start))
+
+	// resets the Builder
+	m.Grammar.GetBuilder().Reset()
 
 	return result, rowCnt
 }
 
 // Log a query in the connection's query log.
-func (m *Connection) logQuery(action, query string, bindings []interface{}, elapsed time.Duration) {
+func (m *Connection) logQuery(query string, bindings []interface{}, elapsed time.Duration) {
 	if m.loggingQueries {
 		m.queryLog = append(m.queryLog, map[string]interface{}{
-			"action":   action,
 			"query":    query,
 			"bindings": bindings,
-			"time":     elapsed,
+			"time":     elapsed.String(),
 		})
 	}
 }
@@ -187,6 +187,10 @@ func (m *Connection) logQuery(action, query string, bindings []interface{}, elap
 func (m *Connection) AffectingStatement() int64 {
 
 	_, rowCnt := m.run(func() ([]map[string]interface{}, int64, error) {
+
+		if m.Pretending {
+			return nil, 0, nil
+		}
 
 		stmt, err := m.DB.Prepare(m.Grammar.GetBuilder().PSql)
 		if err != nil {
@@ -209,6 +213,31 @@ func (m *Connection) AffectingStatement() int64 {
 	return rowCnt
 }
 
+// Pretend run dry mode
+func (m *Connection) Pretend(fn func()) []map[string]interface{} {
+	return m.withFreshQueryLog(func() []map[string]interface{} {
+		m.Pretending = true
+
+		fn()
+
+		m.Pretending = false
+		return m.queryLog
+	})
+}
+
+func (m *Connection) withFreshQueryLog(callback func() []map[string]interface{}) []map[string]interface{} {
+	lg := m.loggingQueries
+
+	m.loggingQueries = true
+
+	m.queryLog = []map[string]interface{}{}
+	result := callback()
+
+	m.loggingQueries = lg
+
+	return result
+}
+
 // Select Run a select statement against the database.
 func (m *Connection) Select(useReadDB bool) []map[string]interface{} {
 
@@ -216,6 +245,11 @@ func (m *Connection) Select(useReadDB bool) []map[string]interface{} {
 	m.Grammar.CompileSelect()
 
 	results, _ := m.run(func() ([]map[string]interface{}, int64, error) {
+
+		if m.Pretending {
+			return nil, 0, nil
+		}
+
 		var stmt *sql.Stmt
 		var err error
 		if useReadDB && m.DBRead != nil {

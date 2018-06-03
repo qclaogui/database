@@ -11,6 +11,8 @@ type Connector interface {
 	// Select Run a select statement against the database.
 	Select(bool) []map[string]interface{}
 
+	Pretend(func()) []map[string]interface{}
+
 	Delete() int64
 
 	Table(string) *Builder
