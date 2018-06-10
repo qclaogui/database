@@ -3,6 +3,7 @@ package builder
 import (
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var operators = []string{
@@ -36,6 +37,7 @@ type Builder struct {
 	Components       map[string][]map[string]string // compile Components
 	SelectComponents []string                       // just for compile Component in order
 	UseWrite         bool                           // Whether use write DB for select.
+	mu               sync.Mutex
 	debug            bool
 }
 
@@ -89,6 +91,7 @@ func (b *Builder) Reset() {
 	b.Operators = map[string]interface{}{}
 	b.Components = map[string][]map[string]string{}
 	b.UseWrite = false
+	b.mu.Unlock()
 }
 
 // Debug debug mode
@@ -739,6 +742,7 @@ func (b *Builder) aggregate(fn string, column ...string) interface{} {
 
 // From Set the table which the query is targeting.
 func (b *Builder) From(from string) *Builder {
+	b.mu.Lock()
 	b.FromTable = from
 	b.Components["from"] = nil
 
