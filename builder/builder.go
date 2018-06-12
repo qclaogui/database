@@ -91,6 +91,7 @@ func (b *Builder) Reset() {
 	b.Operators = map[string]interface{}{}
 	b.Components = map[string][]map[string]string{}
 	b.UseWrite = false
+	b.debug = false
 	b.mu.Unlock()
 }
 
