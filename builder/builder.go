@@ -19,7 +19,6 @@ type Builder struct {
 	Connection       Connector     // The database connection instance.
 	PSql             string        // Prepared sql
 	PArgs            []interface{} // Prepared args
-	Bindings         *Bindings     // The current query value bindings.
 	Aggregate        map[string]string
 	Columns          []string            // The columns that should be returned.
 	Values           []map[string]string // update  and insert args
@@ -41,19 +40,10 @@ type Builder struct {
 	debug            bool
 }
 
-// Bindings The current query value bindings.
-type Bindings struct {
-	Wheres []interface{}
-	Having []interface{}
-	Order  []interface{}
-	Union  []interface{}
-}
-
 // New return a Builder
 func New(c Connector) *Builder {
 	return &Builder{
 		Connection: c,
-		Bindings:   &Bindings{},
 		Components: map[string][]map[string]string{},
 		SelectComponents: []string{
 			"aggregate",
@@ -74,12 +64,13 @@ func New(c Connector) *Builder {
 // Reset resets the Builder to be empty but
 // keep Connection PSql PArgs and SelectComponents
 func (b *Builder) Reset() {
-	b.Bindings = &Bindings{}
+	var pa []interface{}
 	b.Aggregate = map[string]string{}
 	b.Columns = []string{}
 	b.Values = []map[string]string{}
 	b.IsDistinct = false
 	b.FromTable = ""
+	b.PArgs = pa
 	b.Groups = []string{}
 	b.LimitNum = 0
 	b.OffsetNum = 0
@@ -112,10 +103,9 @@ func (b *Builder) Insert(values []map[string]string) int64 {
 
 // Update a record in the database. CURD [U]
 func (b *Builder) Update(value map[string]string) int64 {
-
-	b.prepareBindingsForUpdate(value)
-
 	// 返回受影响的行数
+	b.Values = append(b.Values, value)
+
 	return b.Connection.Update()
 }
 
@@ -131,21 +121,6 @@ func (b *Builder) Increment(column string, amount ...string) bool {
 	}
 
 	return b.Update(columns) > 0
-}
-
-// Prepare the bindings for an update statement.
-func (b *Builder) prepareBindingsForUpdate(value map[string]string) {
-	b.Values = append(b.Values, value)
-
-	tem := make([]interface{}, len(b.Bindings.Wheres))
-	copy(tem, b.Bindings.Wheres)
-	b.Bindings.Wheres = nil
-
-	for _, v := range value {
-		b.Bindings.Wheres = append(b.Bindings.Wheres, v)
-	}
-
-	b.Bindings.Wheres = append(b.Bindings.Wheres, tem...)
 }
 
 // Exists Run the query as a "Exists" statement
@@ -282,9 +257,6 @@ func (b *Builder) whereBetweenOrIn(whereDateType, column string, values []string
 
 	b.Components["wheres"] = append(b.Components["wheres"], where)
 
-	// Binding values
-	b.addBindings(where)
-
 	return b
 }
 
@@ -382,14 +354,6 @@ func (b *Builder) OrWhereDate(column, operator string, values ...string) *Builde
 	return b.where("Date", column, operator, value, "or", pt)
 }
 
-func (b *Builder) addBindings(where map[string]string) {
-	if len(where["value"]) > 0 {
-		for _, value := range strings.Split(where["value"], ",") {
-			b.Bindings.Wheres = append(b.Bindings.Wheres, strings.TrimSpace(value))
-		}
-	}
-}
-
 // Having clause to the query.
 func (b *Builder) Having(column, operator string, values ...string) *Builder {
 
@@ -435,8 +399,6 @@ func (b *Builder) having(column, operator, value, logical string) *Builder {
 	}
 
 	b.Components["havings"] = append(b.Components["havings"], having)
-
-	b.addBindings(having)
 
 	return b
 }
@@ -531,8 +493,6 @@ func (b *Builder) whereRaw(sql, value, logical string) *Builder {
 
 	b.Components["wheres"] = append(b.Components["wheres"], where)
 
-	// Binding Values
-	b.addBindings(where)
 	return b
 }
 
@@ -561,9 +521,6 @@ func (b *Builder) where(whereType, column, operator, value, logical, pt string) 
 	}
 
 	b.Components["wheres"] = append(b.Components["wheres"], where)
-
-	// Binding Values
-	b.addBindings(where)
 
 	return b
 }

@@ -19,7 +19,7 @@ type Connection struct {
 	queryLog          []map[string]interface{} // All of the queries run against the connection.
 	loggingQueries    bool                     // Indicates whether queries are being logged.
 	recordsIsModified bool                     // Indicates if changes have been made to the database.
-	Pretending        bool                     //Indicates if the connection is in a "dry run".
+	Pretending        bool                     // Indicates if the connection is in a "dry run".
 }
 
 func hasReadWrite(c *DBConfig) (hasRead bool) {

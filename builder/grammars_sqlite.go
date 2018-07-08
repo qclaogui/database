@@ -10,67 +10,64 @@ type SQLiteGrammars struct {
 }
 
 // SetBuilder set
-func (m *SQLiteGrammars) SetBuilder(B *Builder) {
-	m.Builder = B
+func (sg *SQLiteGrammars) SetBuilder(B *Builder) {
+	sg.Builder = B
 }
 
 // GetBuilder get
-func (m *SQLiteGrammars) GetBuilder() *Builder {
-	if m.Builder == nil {
+func (sg *SQLiteGrammars) GetBuilder() *Builder {
+	if sg.Builder == nil {
 		panic("GetBuilder PostgresGrammars error")
 	}
-	return m.Builder
+	return sg.Builder
 }
 
 // CompileSelect compile an select statement into SQL.
-func (m *SQLiteGrammars) CompileSelect() {
-	m.Builder.PSql = m.compileSelect()
-	m.Builder.PArgs = m.Builder.Bindings.Wheres
-}
+func (sg *SQLiteGrammars) CompileSelect() { sg.Builder.PSql = sg.compileSelect() }
 
 // CompileSelect compile an select statement into SQL.
-func (m *SQLiteGrammars) compileSelect() string {
+func (sg *SQLiteGrammars) compileSelect() string {
 	var sql strings.Builder
 	sql.Grow(1024)
-	for _, component := range m.Builder.SelectComponents {
-		if _, ok := m.Builder.Components[component]; ok {
-			m.compileComponent(component, &sql)
+	for _, component := range sg.Builder.SelectComponents {
+		if _, ok := sg.Builder.Components[component]; ok {
+			sg.compileComponent(component, &sql)
 		}
 	}
 
 	return sql.String()
 }
 
-func (m *SQLiteGrammars) compileComponent(component string, sql *strings.Builder) {
+func (sg *SQLiteGrammars) compileComponent(component string, sql *strings.Builder) {
 	switch component {
 	case "aggregate":
-		m.compileComponentAggregate(sql)
+		sg.compileComponentAggregate(sql)
 	case "columns":
-		m.compileComponentColumns(sql)
+		sg.compileComponentColumns(sql)
 	case "from":
-		m.compileComponentFromTable(sql)
+		sg.compileComponentFromTable(sql)
 	case "joins":
-		m.compileComponentJoins(sql)
+		sg.compileComponentJoins(sql)
 	case "wheres":
-		m.compileComponentWheres(sql)
+		sg.compileComponentWheres(sql)
 	case "groups":
-		m.compileComponentGroups(sql)
+		sg.compileComponentGroups(sql)
 	case "havings":
-		m.compileComponentHavings(sql)
+		sg.compileComponentHavings(sql)
 	case "orders":
-		m.compileComponentOrders(sql)
+		sg.compileComponentOrders(sql)
 	case "limit":
-		m.compileComponentLimitNum(sql)
+		sg.compileComponentLimitNum(sql)
 	case "offset":
-		m.compileComponentOffsetNum(sql)
+		sg.compileComponentOffsetNum(sql)
 	case "unions":
 	case "lock":
 	}
 }
 
-func (m *SQLiteGrammars) compileComponentWheres(sql *strings.Builder) {
+func (sg *SQLiteGrammars) compileComponentWheres(sql *strings.Builder) {
 	sql.WriteString(" where ")
-	for i, w := range m.Builder.Components["wheres"] {
+	for i, w := range sg.Builder.Components["wheres"] {
 		// skip first where logical
 		if i > 0 {
 			sql.WriteString(" ")
@@ -86,20 +83,27 @@ func (m *SQLiteGrammars) compileComponentWheres(sql *strings.Builder) {
 
 		switch w["type"] {
 		case "Basic":
-			sql.WriteString(m.wrap(w["column"]))
+			sql.WriteString(sg.wrap(w["column"]))
 			sql.WriteString(" ")
 			sql.WriteString(w["operator"])
 			sql.WriteString(" ")
-			sql.WriteString(m.GetPlaceholder())
+			sql.WriteString(sg.GetPlaceholder(w["value"]))
 		case "Between":
-			sql.WriteString(m.wrap(w["column"]))
+			sql.WriteString(sg.wrap(w["column"]))
+			p := sg.GetPlaceholder(w["value"])
 			if v, ok := w["not"]; ok && v == "true" {
-				sql.WriteString(" not between ? and ?")
+				sql.WriteString(" not between ")
+				sql.WriteString(p)
+				sql.WriteString(" and ")
+				sql.WriteString(p)
 			} else {
-				sql.WriteString(" between ? and ?")
+				sql.WriteString(" between ")
+				sql.WriteString(p)
+				sql.WriteString(" and ")
+				sql.WriteString(p)
 			}
 		case "In":
-			sql.WriteString(m.wrap(w["column"]))
+			sql.WriteString(sg.wrap(w["column"]))
 			if v, ok := w["not"]; ok && v == "true" {
 				sql.WriteString(" not in (")
 			} else {
@@ -107,59 +111,59 @@ func (m *SQLiteGrammars) compileComponentWheres(sql *strings.Builder) {
 			}
 			for i := range strings.Split(w["value"], ",") {
 				if i == 0 {
-					sql.WriteString(m.GetPlaceholder())
+					sql.WriteString(sg.GetPlaceholder(w["value"]))
 				} else {
 					sql.WriteString(", ")
-					sql.WriteString(m.GetPlaceholder())
+					sql.WriteString(sg.GetPlaceholder(w["value"]))
 				}
 			}
 			sql.WriteString(")")
 		case "Year":
 			sql.WriteString("strftime('%Y', ")
-			sql.WriteString(m.wrap(w["column"]))
+			sql.WriteString(sg.wrap(w["column"]))
 			sql.WriteString(") ")
 			sql.WriteString(w["operator"])
 			sql.WriteString(" cast(")
-			sql.WriteString(m.GetPlaceholder())
+			sql.WriteString(sg.GetPlaceholder(w["value"]))
 			sql.WriteString(" as text)")
 		case "Month":
 			sql.WriteString("strftime('%m', ")
-			sql.WriteString(m.wrap(w["column"]))
+			sql.WriteString(sg.wrap(w["column"]))
 			sql.WriteString(") ")
 			sql.WriteString(w["operator"])
 			sql.WriteString(" cast(")
-			sql.WriteString(m.GetPlaceholder())
+			sql.WriteString(sg.GetPlaceholder(w["value"]))
 			sql.WriteString(" as text)")
 		case "Date":
 			sql.WriteString("strftime('%Y-%m-%d', ")
-			sql.WriteString(m.wrap(w["column"]))
+			sql.WriteString(sg.wrap(w["column"]))
 			sql.WriteString(") ")
 			sql.WriteString(w["operator"])
 			sql.WriteString(" cast(")
-			sql.WriteString(m.GetPlaceholder())
+			sql.WriteString(sg.GetPlaceholder(w["value"]))
 			sql.WriteString(" as text)")
 		case "Day":
 			sql.WriteString("strftime('%d', ")
-			sql.WriteString(m.wrap(w["column"]))
+			sql.WriteString(sg.wrap(w["column"]))
 			sql.WriteString(") ")
 			sql.WriteString(w["operator"])
 			sql.WriteString(" cast(")
-			sql.WriteString(m.GetPlaceholder())
+			sql.WriteString(sg.GetPlaceholder(w["value"]))
 			sql.WriteString(" as text)")
 		case "Time":
 			sql.WriteString("strftime('%H:%M:%S', ")
-			sql.WriteString(m.wrap(w["column"]))
+			sql.WriteString(sg.wrap(w["column"]))
 			sql.WriteString(") ")
 			sql.WriteString(w["operator"])
 			sql.WriteString(" cast(")
-			sql.WriteString(m.GetPlaceholder())
+			sql.WriteString(sg.GetPlaceholder(w["value"]))
 			sql.WriteString(" as text)")
 		case "Column":
-			sql.WriteString(m.wrap(w["first"]))
+			sql.WriteString(sg.wrap(w["first"]))
 			sql.WriteString(" ")
 			sql.WriteString(w["operator"])
 			sql.WriteString(" ")
-			sql.WriteString(m.wrap(w["second"]))
+			sql.WriteString(sg.wrap(w["second"]))
 		case "Raw":
 			sql.WriteString(w["sql"])
 		default:

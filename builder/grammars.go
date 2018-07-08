@@ -19,7 +19,11 @@ type Grammars struct {
 //	=====               ==========            ======
 //	WHERE col = ?       WHERE col = $1        WHERE col = :col
 //	VALUES(?, ?, ?)     VALUES($1, $2, $3)    VALUES(:val1, :val2, :val3)
-func (g *Grammars) GetPlaceholder() string {
+func (g *Grammars) GetPlaceholder(s string) string {
+	for _, v := range strings.Split(s, ",") {
+		g.Builder.PArgs = append(g.Builder.PArgs, v)
+	}
+
 	if g.Placeholder != "?" {
 		g.PlaceholderNum++
 		return g.Placeholder + itoa(g.PlaceholderNum)
@@ -29,28 +33,16 @@ func (g *Grammars) GetPlaceholder() string {
 }
 
 // CompileInsert compile an insert statement into SQL.
-func (g *Grammars) CompileInsert() {
-	g.Builder.PSql = g.compileInsert()
-	g.Builder.PArgs = g.Builder.Bindings.Wheres
-}
+func (g *Grammars) CompileInsert() { g.Builder.PSql = g.compileInsert() }
 
 // CompileDelete compile an delete statement into SQL.
-func (g *Grammars) CompileDelete() {
-	g.Builder.PSql = g.compileDelete()
-	g.Builder.PArgs = g.Builder.Bindings.Wheres
-}
+func (g *Grammars) CompileDelete() { g.Builder.PSql = g.compileDelete() }
 
 // CompileUpdate compile an update statement into SQL.
-func (g *Grammars) CompileUpdate() {
-	g.Builder.PSql = g.compileUpdate()
-	g.Builder.PArgs = g.Builder.Bindings.Wheres
-}
+func (g *Grammars) CompileUpdate() { g.Builder.PSql = g.compileUpdate() }
 
 // CompileSelect compile an select statement into SQL.
-func (g *Grammars) CompileSelect() {
-	g.Builder.PSql = g.compileSelect()
-	g.Builder.PArgs = g.Builder.Bindings.Wheres
-}
+func (g *Grammars) CompileSelect() { g.Builder.PSql = g.compileSelect() }
 
 // CompileExists com
 func (g *Grammars) CompileExists() {
@@ -62,7 +54,6 @@ func (g *Grammars) CompileExists() {
 	sql.WriteString(g.wrap("exists"))
 
 	g.Builder.PSql = sql.String()
-	g.Builder.PArgs = g.Builder.Bindings.Wheres
 }
 
 // SetTablePrefix Set the grammar's table prefix.
@@ -136,10 +127,10 @@ func (g *Grammars) compileUpdate() string {
 	sql.WriteString(joins.String())
 	sql.WriteString(" set ")
 
-	for key := range g.Builder.Values[0] {
+	for key, v := range g.Builder.Values[0] {
 		updateColumns.WriteString(g.wrap(key))
 		updateColumns.WriteString(" = ")
-		updateColumns.WriteString(g.GetPlaceholder())
+		updateColumns.WriteString(g.GetPlaceholder(v))
 		updateColumns.WriteString(", ")
 	}
 
@@ -153,12 +144,11 @@ func (g *Grammars) parameterize(columns []string, values map[string]string) stri
 	var col strings.Builder
 	col.Grow(1024)
 	for k, v := range columns {
-		g.Builder.Bindings.Wheres = append(g.Builder.Bindings.Wheres, values[v])
 		if k > 0 {
 			col.WriteString(", ")
-			col.WriteString(g.GetPlaceholder())
+			col.WriteString(g.GetPlaceholder(values[v]))
 		} else {
-			col.WriteString(g.GetPlaceholder())
+			col.WriteString(g.GetPlaceholder(values[v]))
 		}
 	}
 
@@ -280,13 +270,20 @@ func (g *Grammars) compileComponentWheres(sql *strings.Builder) {
 			sql.WriteString(" ")
 			sql.WriteString(w["operator"])
 			sql.WriteString(" ")
-			sql.WriteString(g.GetPlaceholder())
+			sql.WriteString(g.GetPlaceholder(w["value"]))
 		case "Between":
 			sql.WriteString(g.wrap(w["column"]))
+			p := g.GetPlaceholder(w["value"])
 			if v, ok := w["not"]; ok && v == "true" {
-				sql.WriteString(" not between ? and ?")
+				sql.WriteString(" not between ")
+				sql.WriteString(p)
+				sql.WriteString(" and ")
+				sql.WriteString(p)
 			} else {
-				sql.WriteString(" between ? and ?")
+				sql.WriteString(" between ")
+				sql.WriteString(p)
+				sql.WriteString(" and ")
+				sql.WriteString(p)
 			}
 		case "In":
 			sql.WriteString(g.wrap(w["column"]))
@@ -297,10 +294,10 @@ func (g *Grammars) compileComponentWheres(sql *strings.Builder) {
 			}
 			for i := range strings.Split(w["value"], ",") {
 				if i == 0 {
-					sql.WriteString(g.GetPlaceholder())
+					sql.WriteString(g.GetPlaceholder(w["value"]))
 				} else {
 					sql.WriteString(", ")
-					sql.WriteString(g.GetPlaceholder())
+					sql.WriteString(g.GetPlaceholder(w["value"]))
 				}
 			}
 			sql.WriteString(")")
@@ -311,7 +308,7 @@ func (g *Grammars) compileComponentWheres(sql *strings.Builder) {
 			sql.WriteString(") ")
 			sql.WriteString(w["operator"])
 			sql.WriteString(" ")
-			sql.WriteString(g.GetPlaceholder())
+			sql.WriteString(g.GetPlaceholder(w["value"]))
 		case "Column":
 			sql.WriteString(g.wrap(w["first"]))
 			sql.WriteString(" ")
@@ -352,7 +349,7 @@ func (g *Grammars) compileComponentHavings(sql *strings.Builder) {
 			sql.WriteString(" ")
 			sql.WriteString(having["operator"])
 			sql.WriteString(" ")
-			sql.WriteString(g.GetPlaceholder())
+			sql.WriteString(g.GetPlaceholder(having["value"]))
 		}
 	}
 }

@@ -6,14 +6,14 @@ type MySqlGrammars struct {
 }
 
 // SetBuilder set
-func (m *MySqlGrammars) SetBuilder(B *Builder) {
-	m.Builder = B
+func (mg *MySqlGrammars) SetBuilder(B *Builder) {
+	mg.Builder = B
 }
 
 // GetBuilder get
-func (m *MySqlGrammars) GetBuilder() *Builder {
-	if m.Builder == nil {
+func (mg *MySqlGrammars) GetBuilder() *Builder {
+	if mg.Builder == nil {
 		panic("GetBuilder MySqlGrammars error")
 	}
-	return m.Builder
+	return mg.Builder
 }
