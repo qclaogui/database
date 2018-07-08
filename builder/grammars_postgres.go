@@ -6,14 +6,14 @@ type PostgresGrammars struct {
 }
 
 // SetBuilder set
-func (m *PostgresGrammars) SetBuilder(B *Builder) {
-	m.Builder = B
+func (pg *PostgresGrammars) SetBuilder(B *Builder) {
+	pg.Builder = B
 }
 
 // GetBuilder get
-func (m *PostgresGrammars) GetBuilder() *Builder {
-	if m.Builder == nil {
+func (pg *PostgresGrammars) GetBuilder() *Builder {
+	if pg.Builder == nil {
 		panic("GetBuilder PostgresGrammars error")
 	}
-	return m.Builder
+	return pg.Builder
 }
