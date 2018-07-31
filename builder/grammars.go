@@ -104,9 +104,8 @@ func (g *Grammars) compileDelete() string {
 	sql.WriteString("delete from ")
 	sql.WriteString("`")
 	sql.WriteString(g.GetTablePrefix())
-	sql.WriteString(g.wrap(g.Builder.FromTable))
+	sql.WriteString(g.Builder.FromTable)
 	sql.WriteString("`")
-
 	g.compileComponentWheres(&sql)
 
 	return sql.String()
@@ -123,7 +122,7 @@ func (g *Grammars) compileUpdate() string {
 	sql.WriteString("update ")
 	sql.WriteString("`")
 	sql.WriteString(g.GetTablePrefix())
-	sql.WriteString(g.wrap(g.Builder.FromTable))
+	sql.WriteString(g.Builder.FromTable)
 	sql.WriteString("`")
 
 	if g.Builder.Components["joins"] != nil {
