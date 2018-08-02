@@ -427,10 +427,8 @@ func (g *Grammars) wrap(value string) string {
 func (g *Grammars) wrapTwoValue(value, sep string, col *strings.Builder) (s string) {
 	segments := strings.SplitN(value, sep, 2)
 
-	col.WriteString("`")
 	col.WriteString(g.GetTablePrefix())
 	col.WriteString(segments[0])
-	col.WriteString("`")
 
 	col.WriteString(sep)
 	if len(value) > 1 {
