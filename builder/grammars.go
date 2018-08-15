@@ -255,7 +255,9 @@ func (g *Grammars) compileComponentJoins(sql *strings.Builder) {
 }
 
 func (g *Grammars) compileComponentWheres(sql *strings.Builder) {
-
+	if len(g.Builder.Components["wheres"]) < 1 {
+		return
+	}
 	sql.WriteString(" where ")
 	for i, w := range g.Builder.Components["wheres"] {
 		// skip first where logical
@@ -299,12 +301,12 @@ func (g *Grammars) compileComponentWheres(sql *strings.Builder) {
 			} else {
 				sql.WriteString(" in (")
 			}
-			for i := range strings.Split(w["value"], ",") {
+			for i, v := range strings.Split(w["value"], ",") {
 				if i == 0 {
-					sql.WriteString(g.GetPlaceholder(w["value"]))
+					sql.WriteString(g.GetPlaceholder(v))
 				} else {
 					sql.WriteString(", ")
-					sql.WriteString(g.GetPlaceholder(w["value"]))
+					sql.WriteString(g.GetPlaceholder(v))
 				}
 			}
 			sql.WriteString(")")
